@@ -48,5 +48,5 @@ def DrawLine(xVector, yVector, ylabel="ylabel", yMin=0, yMax=2000):
     offset += 60
 #DrawLine(time_list, delay_list, ylabel="Delay", yMin = min_delay, yMax = max_delay)
 host.legend()
-#show()
-savefig(png_name)
+show()
+#savefig(png_name)

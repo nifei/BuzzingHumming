@@ -95,7 +95,7 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 new_case = 'Sync'
 
         if packet_match:
-            yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'in':packet_match.time_in}
+            yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
         if new_case != match_case:
             print match_case + '->' + new_case
             match_case = new_case
