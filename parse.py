@@ -3,7 +3,7 @@ import subprocess
 #output = subprocess.call('./input.sh', shell=True)
 
 HorizonLength = 1
-Config_Loss_Small_Interval = 5 # collect data every second
+Config_Loss_Small_Interval = 2 # collect data every second
 # time based on out time
 
 class Packet:
@@ -50,11 +50,13 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
     packet_count_in_small_interval = 0
     while ((not stop_in) or (not stop_out)):
         packet_match, packet_out, packet_in = None, None, None
-        if not stop_out:
+        if not stop_out and out_lead_in >= 0:
             try:
                 packet_out = Out.next()
             except StopIteration:
                 stop_out = True
+        else:
+            out_lead_in = out_lead_in + 1
         if (not stop_in):
             try:
                 packet_in = In.next()
@@ -84,6 +86,8 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 if in_key_in_out_dict:
                     packet_match = packet_in.InMergeOut(unmatched_out[packet_in.key])
                     unmatched_out.pop(packet_in.key, None)
+                    out_lead_in = -1-len(unmatched_out)
+                    #print 'in key in out dict, in this case in should wait, this case should be avoid:' + str(out_lead_in)
                     #for key in unmatched_in.keys():
                     #    if packet_match.time_in - unmatched_in[key].time > HorizonLength:
                     #        unmatched_in.pop(key, None)
@@ -94,21 +98,22 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
 
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
-            if start_time_out == None or start_time_out - packet_match.time_out > Config_Loss_Small_Interval:
-                # clear un found keys
-                if start_time_out != None:
-                    # summary un received packet in out
-                    un_received_packet_in_out = len(unmatched_out)
-                    print un_received_packet_in_out, packet_count_in_small_interval
+            if packet_out and out_lead_in >= 0:
+               if start_time_out == None or packet_out.time - start_time_out > Config_Loss_Small_Interval:
+                   # clear un found keys
+                   for (key, packet) in unmatched_out.items():
+                       if packet_out.time - packet.time > 0:
+                           unmatched_out.pop(key, None)
+                   if start_time_out != None:
+                       # summary un received packet in out
+                       un_received_packet_in_out = len(unmatched_out)
+                       if out_lead_in >= 0:
+                           print un_received_packet_in_out, packet_count_in_small_interval
+                           if packet_count_in_small_interval > 0:
+                               yield {'loss':1-float(un_received_packet_in_out)/float(packet_count_in_small_interval), 'out':packet_out.time}
 
-                for (key, packet) in unmatched_out.items():
-                    if packet_match.time_out - packet.time > Config_Loss_Small_Interval:
-                        unmatched_out.pop(key, None)
-                for (key, packet) in unmatched_in.items():
-                    if packet_match.time_in - packet.time > Config_Loss_Small_Interval:
-                        unmatched_in.pop(key, None)
-                start_time_out = packet_match.time_out
-                packet_count_in_small_interval = 0
-            else:
-                packet_count_in_small_interval = packet_count_in_small_interval + 1
+                   start_time_out = packet_out.time
+                   packet_count_in_small_interval = 1
+               else:
+                  packet_count_in_small_interval = packet_count_in_small_interval + 1
 
