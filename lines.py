@@ -1,5 +1,5 @@
-import parse
 import range
+import statpcap
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import host_subplot
 import mpl_toolkits.axisartist as AA
@@ -7,7 +7,7 @@ from pylab import *
 import time
 import re
 png_name = 'delay1.png'
-func_ = parse.MergePcap1
+merge = statpcap.StatPcap
 min_delay, max_delay = None, None
 time_list = list()
 delay_list = list()
@@ -17,7 +17,7 @@ input_pcap = sys.argv[1]
 output_pcap = sys.argv[2]
 
 time_before = time.time()
-for item in func_(output_pcap, input_pcap, '192.168.91.253', '192.168.91.64'):
+for item in merge(output_pcap, input_pcap, '192.168.91.253', '192.168.91.64'):
     if 'delay' in item.keys():
         time_list.append(item['out'])
         delay_list.append(item['delay'])
