@@ -11,12 +11,18 @@ func_ = parse.MergePcap1
 min_delay, max_delay = None, None
 time_list = list()
 delay_list = list()
+time_loss_list = list()
+loss_list = list()
 
 time_before = time.time()
-for item in func_('output.pcapng', 'input.pcapng', '192.168.91.253', '192.168.91.64'):
-    time_list.append(item['out'])
-    delay_list.append(item['delay'])
-    min_delay, max_delay = range.calib_range(min_delay, max_delay, item['delay'])
+for item in func_('out.pcapng', 'in.pcapng', '192.168.91.253', '192.168.91.64'):
+    if 'delay' in item.keys():
+        time_list.append(item['out'])
+        delay_list.append(item['delay'])
+        min_delay, max_delay = range.calib_range(min_delay, max_delay, item['delay'])
+    elif 'loss' in item.keys():
+        time_loss_list.append(item['out'])
+        loss_list.append(item['loss'])
 
 time_after = time.time()
 dur = time_after - time_before
@@ -53,7 +59,7 @@ def DrawLine(xVector, yVector, ylabel="ylabel", yMin=0, yMax=2000):
     par.set_ylim(yMin, yMax)
     par.axis["right"].label.set_color(plot.get_color())
     offset += 60
-#DrawLine(time_list, delay_list, ylabel="Delay", yMin = min_delay, yMax = max_delay)
+DrawLine(time_loss_list, loss_list, ylabel="Loss", yMin = 0, yMax = 1.2)
 host.legend()
 show()
 #savefig(png_name)
