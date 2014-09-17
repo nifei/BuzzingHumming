@@ -13,9 +13,11 @@ time_list = list()
 delay_list = list()
 time_loss_list = list()
 loss_list = list()
+input_pcap = sys.argv[1]
+output_pcap = sys.argv[2]
 
 time_before = time.time()
-for item in func_('out.pcapng', 'in.pcapng', '192.168.91.253', '192.168.91.64'):
+for item in func_(output_pcap, input_pcap, '192.168.91.253', '192.168.91.64'):
     if 'delay' in item.keys():
         time_list.append(item['out'])
         delay_list.append(item['delay'])
@@ -28,10 +30,10 @@ time_after = time.time()
 dur = time_after - time_before
 
 min_delay, max_delay = range.extend_range(min_delay, max_delay)
-print min_delay, max_delay
-print time_list[-1] - time_list[0]
-print len(time_list)
-print dur
+print 'delay range:', min_delay, max_delay
+print 'time range:', time_list[-1] - time_list[0]
+print 'sample count:', len(time_list)
+print 'complexity:', dur
 
 clf()
 host = host_subplot(111, axes_class=AA.Axes)

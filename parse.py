@@ -3,8 +3,8 @@ import time
 #rom In
 #output = subprocess.call('./input.sh', shell=True)
 
-Config_Loss_Small_Interval = 1 # collect data every second
-HorizonLength = 1
+Config_Loss_Small_Interval = 2 # collect data every second
+HorizonLength = 2
 
 class Packet:
     def __init__(self):
@@ -77,12 +77,21 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 if out_key_in_in_dict:
                     packet_match = packet_out.OutMergeIn(unmatched_in[packet_out.key])
                     unmatched_in.pop(packet_out.key, None)
-#                    if synched == False:
-#                        print 'synched'
-#                        time.sleep(5)
                     synched = True
                 else:
                     unmatched_out[packet_out.key] = packet_out
+                if synched == True:
+                    if start_time_out == None or packet_out.time - start_time_out > Config_Loss_Small_Interval:
+                        if start_time_out != None:
+                            un_received_packet_in_out = len(unmatched_out)
+                            if packet_count_in_small_interval > 0:
+                                yield {'loss':1-float(un_received_packet_in_out)/float(packet_count_in_small_interval), 'out':packet_out.time}
+                        for (key, packet) in unmatched_out.items():
+                            if packet_out.time - packet.time > 0:
+                                unmatched_out.pop(key, None)
+                                print key
+                        start_time_out = packet_out.time
+                        packet_count_in_small_interval = 1
             if packet_in:
                 if packet_in.key in unmatched_out.keys():
                     if abs(packet_in.time - unmatched_out[packet_in.key].time) < HorizonLength:
@@ -91,27 +100,12 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                     packet_match = packet_in.InMergeOut(unmatched_out[packet_in.key])
                     unmatched_out.pop(packet_in.key, None)
                     out_lead_in = -1-len(unmatched_out)
+                    # large in dict will not affect result, but performance
                     for (key, packet) in unmatched_in.items():
                         if packet_in.time - packet.time > HorizonLength:
                             unmatched_in.pop(key, None)
                 else:
                     unmatched_in[packet_in.key] = packet_in
-#        print len(unmatched_out), len(unmatched_in)
 
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
-        if packet_out and synched == True:
-            if start_time_out == None or packet_out.time - start_time_out > Config_Loss_Small_Interval:
-                # clear un found keys
-#                print 'packet out', packet_out.key, packet_out.time
-                for (key, packet) in unmatched_out.items():
-                    if packet_out.time - packet.time > 0:
-#                        print key, packet.time
-                        unmatched_out.pop(key, None)
-                if start_time_out != None:
-                    # summary un received packet in out
-                    un_received_packet_in_out = len(unmatched_out)
-                    if packet_count_in_small_interval > 0:
-                        yield {'loss':1-float(un_received_packet_in_out)/float(packet_count_in_small_interval), 'out':packet_out.time}
-                start_time_out = packet_out.time
-                packet_count_in_small_interval = 1
