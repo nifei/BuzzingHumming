@@ -47,6 +47,7 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
     stop_out = False
     out_lead_in = 0
     start_time_out = None
+    packet_count_in_small_interval = 0
     while ((not stop_in) or (not stop_out)):
         packet_match, packet_out, packet_in = None, None, None
         if not stop_out:
@@ -98,7 +99,7 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 if start_time_out != None:
                     # summary un received packet in out
                     un_received_packet_in_out = len(unmatched_out)
-                    pass #yield loss_rate
+                    print un_received_packet_in_out, packet_count_in_small_interval
 
                 for (key, packet) in unmatched_out.items():
                     if packet_match.time_out - packet.time > Config_Loss_Small_Interval:
@@ -107,3 +108,7 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                     if packet_match.time_in - packet.time > Config_Loss_Small_Interval:
                         unmatched_in.pop(key, None)
                 start_time_out = packet_match.time_out
+                packet_count_in_small_interval = 0
+            else:
+                packet_count_in_small_interval = packet_count_in_small_interval + 1
+
