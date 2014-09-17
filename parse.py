@@ -39,7 +39,7 @@ def ParsePcap(pcap, ip1, ip2):
         else:
             break
 
-def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
+def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
     In = ParsePcap(pcap_in, ip_out, ip_in)
     Out = ParsePcap(pcap_out, ip_out, ip_in)
     unmatched_out, unmatched_in = {}, {}
@@ -106,6 +106,5 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                             unmatched_in.pop(key, None)
                 else:
                     unmatched_in[packet_in.key] = packet_in
-
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
