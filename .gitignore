@@ -1,0 +1,4 @@
+# ignore files
+*.pcapng
+*.pyc
+*.png
