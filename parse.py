@@ -3,6 +3,8 @@ import subprocess
 #output = subprocess.call('./input.sh', shell=True)
 
 HorizonLength = 1
+Config_Loss_Small_Interval = 5 # collect data every second
+# time based on out time
 
 class Packet:
     def __init__(self):
@@ -44,21 +46,21 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
     stop_in = False
     stop_out = False
     out_lead_in = 0
+    start_time_out = None
     while ((not stop_in) or (not stop_out)):
         packet_match, packet_out, packet_in = None, None, None
-        if not stop_out and out_lead_in <= 0:
+        if not stop_out:
             try:
                 packet_out = Out.next()
             except StopIteration:
                 stop_out = True
-        if (not stop_in) and out_lead_in >= 0:
+        if (not stop_in):
             try:
                 packet_in = In.next()
             except StopIteration:
                 stop_in = True
         if packet_out and packet_in and packet_out.key == packet_in.key:
             packet_match = packet_out.OutMergeIn(packet_in)
-            out_lead_in = 0
         else:
             out_key_in_in_dict, in_key_in_out_dict = False, False
             if packet_out:
@@ -71,7 +73,6 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                     #for key in unmatched_out.keys():
                     #    if packet_match.time_out - unmatched_out[key].time > HorizonLength:
                     #        unmatched_out.pop(key, None)
-                    out_lead_in = -1
                 else:
                     unmatched_out[packet_out.key] = packet_out
                     pass
@@ -85,7 +86,6 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                     #for key in unmatched_in.keys():
                     #    if packet_match.time_in - unmatched_in[key].time > HorizonLength:
                     #        unmatched_in.pop(key, None)
-                    out_lead_in = 1
                     pass
                 else:
                     unmatched_in[packet_in.key] = packet_in
@@ -93,5 +93,17 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
 
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
+            if start_time_out == None or start_time_out - packet_match.time_out > Config_Loss_Small_Interval:
+                # clear un found keys
+                if start_time_out != None:
+                    # summary un received packet in out
+                    un_received_packet_in_out = len(unmatched_out)
+                    pass #yield loss_rate
 
-       # print out_lead_in, len(unmatched_out), len(unmatched_in)
+                for (key, packet) in unmatched_out.items():
+                    if packet_match.time_out - packet.time > Config_Loss_Small_Interval:
+                        unmatched_out.pop(key, None)
+                for (key, packet) in unmatched_in.items():
+                    if packet_match.time_in - packet.time > Config_Loss_Small_Interval:
+                        unmatched_in.pop(key, None)
+                start_time_out = packet_match.time_out
