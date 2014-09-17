@@ -59,11 +59,13 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 stop_out = True
         else:
             out_lead_in = out_lead_in + 1
-        if (not stop_in):
+        if (not stop_in) and in_lead_out >= 0:
             try:
                 packet_in = In.next()
             except StopIteration:
                 stop_in = True
+        else:
+            in_lead_out = in_lead_out + 1
         if packet_out and packet_in and packet_out.key == packet_in.key:
             packet_match = packet_out.OutMergeIn(packet_in)
         else:
@@ -75,16 +77,12 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 if out_key_in_in_dict:
                     packet_match = packet_out.OutMergeIn(unmatched_in[packet_out.key])
                     unmatched_in.pop(packet_out.key, None)
-                    # unless the in dict is obviously too large to query
-                    
-                        in_lead_out = 3 - len(unmatched_in)
-                    if synched == False:
-                        print 'synched'
-                        time.sleep(5)
+#                    if synched == False:
+#                        print 'synched'
+#                        time.sleep(5)
                     synched = True
                 else:
                     unmatched_out[packet_out.key] = packet_out
-                    pass
             if packet_in:
                 if packet_in.key in unmatched_out.keys():
                     if abs(packet_in.time - unmatched_out[packet_in.key].time) < HorizonLength:
@@ -92,12 +90,13 @@ def MergePcap1(pcap_out, pcap_in, ip_out, ip_in):
                 if in_key_in_out_dict:
                     packet_match = packet_in.InMergeOut(unmatched_out[packet_in.key])
                     unmatched_out.pop(packet_in.key, None)
-                    out_lead_in = -3-len(unmatched_out)
-                    pass
+                    out_lead_in = -1-len(unmatched_out)
+                    for (key, packet) in unmatched_in.items():
+                        if packet_in.time - packet.time > HorizonLength:
+                            unmatched_in.pop(key, None)
                 else:
                     unmatched_in[packet_in.key] = packet_in
-                    pass
-        print len(unmatched_out), len(unmatched_in)
+#        print len(unmatched_out), len(unmatched_in)
 
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
