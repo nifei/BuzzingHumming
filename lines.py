@@ -4,21 +4,28 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import host_subplot
 import mpl_toolkits.axisartist as AA
 from pylab import *
+import time
 import re
 png_name = 'delay1.png'
 func_ = parse.MergePcap1
 min_delay, max_delay = None, None
 time_list = list()
 delay_list = list()
-for item in func_('out.pcapng', 'in.pcapng', '192.168.91.253', '192.168.91.64'):
+
+time_before = time.time()
+for item in func_('output.pcapng', 'input.pcapng', '192.168.91.253', '192.168.91.64'):
     time_list.append(item['out'])
     delay_list.append(item['delay'])
     min_delay, max_delay = range.calib_range(min_delay, max_delay, item['delay'])
+
+time_after = time.time()
+dur = time_after - time_before
 
 min_delay, max_delay = range.extend_range(min_delay, max_delay)
 print min_delay, max_delay
 print time_list[-1] - time_list[0]
 print len(time_list)
+print dur
 
 clf()
 host = host_subplot(111, axes_class=AA.Axes)
