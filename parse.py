@@ -59,26 +59,27 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
     packet_count_in_small_interval = 0
     synched = False
     out_lead_in = 0
-    in_lead_out = 0
-    test_time = None 
+    time_out, time_in = None, None
     while ((not stop_in) or (not stop_out)):
         packet_match, packet_out, packet_in = None, None, None
         if not stop_out and out_lead_in >= 0:
             try:
                 packet_out = Out.next()
+                time_out = packet_out.time
             except StopIteration:
                 stop_out = True
         else:
             out_lead_in = out_lead_in + 1
-        if (not stop_in) and in_lead_out >= 0:
+        if (not stop_in):
             try:
                 packet_in = In.next()
+                time_in = packet_in.time
             except StopIteration:
                 stop_in = True
-        else:
-            in_lead_out = in_lead_out + 1
         if packet_out and packet_in and packet_out.key == packet_in.key:
             packet_match = packet_out.OutMergeIn(packet_in)
+            if synched==False:
+                print 'synched:', packet_out.time
             synched = True
         else:
             out_key_in_in_dict, in_key_in_out_dict = False, False
@@ -103,17 +104,18 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
                 if out_key_in_in_dict:
                     packet_match = packet_out.OutMergeIn(unmatched_in[packet_out.key])
                     unmatched_in.pop(packet_out.key, None)
+                    if synched==False:
+                        print 'synched:', packet_out.time
                     synched = True
                 else:
                     unmatched_out[packet_out.key] = packet_out
 
         if packet_match:
-            if test_time != None and test_time >= packet_match.time_out:
-                print 'alert', test_time - packet_match.time_out
-                time.sleep(10)
-            test_time = packet_match.time_out 
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
         # TODO: synch as early as possible
+        if time_out - time_in > HorizonLength and synched==False:
+            out_lead_in = -1 
+
         if synched == True and packet_out:
             if start_time_out == None or packet_out.time - start_time_out > Config_Loss_Small_Interval:
                 if start_time_out != None:

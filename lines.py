@@ -36,8 +36,8 @@ print 'delay range:', min_delay, max_delay
 print 'time range:', time_list[-1] - time_list[0]
 print 'sample count:', len(time_list)
 print 'complexity:', dur
-print time_loss_list
-print loss_list
+#print time_loss_list
+#print loss_list
 
 clf()
 host = host_subplot(111, axes_class=AA.Axes)

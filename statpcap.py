@@ -30,4 +30,21 @@ def StatPcap0(pcap_out, pcap_in, ip_out, ip_in):
                 delay_count_small_interval = delay_count_small_interval + 1
         else:
             yield item
-StatPcap = parse.MergePcap
+StatPcap = StatPcap0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
