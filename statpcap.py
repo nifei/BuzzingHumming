@@ -3,7 +3,7 @@ import parse
 Config_Stat_Interval = 5
 Config_Stat_Small_Interval = 1
 
-def StatPcap(pcap_out, pcap_in, ip_out, ip_in):
+def StatPcap0(pcap_out, pcap_in, ip_out, ip_in):
     delay_list_small_interval = []
     delay_count_small_interval = 0
     last_stat_time = None
@@ -30,3 +30,4 @@ def StatPcap(pcap_out, pcap_in, ip_out, ip_in):
                 delay_count_small_interval = delay_count_small_interval + 1
         else:
             yield item
+StatPcap = parse.MergePcap

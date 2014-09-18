@@ -11,6 +11,7 @@ def calib_range(min, max, value):
 
 def extend_range(min, max):
     range = max - min
-    max_r = max + abs(range) * 0.1
-    min_r = min - abs(range) * 0.1
+    delta = abs(range) * 0.1 if abs(range) > 0 else 0.001
+    max_r = max + delta
+    min_r = min - delta
     return min_r, max_r
