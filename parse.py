@@ -1,10 +1,8 @@
 import subprocess
 import time
-#rom In
-#output = subprocess.call('./input.sh', shell=True)
 
-Config_Loss_Small_Interval = 1 # collect data every second
-HorizonLength = 1
+Config_Loss_Small_Interval = 1 
+HorizonLength = 2
 
 class Packet:
     def __init__(self):
@@ -19,9 +17,7 @@ class Packet:
         self.time_in = _in.time
         return self
 
-loss_test_flag = True
-def ParsePcap(pcap, ip1, ip2, loss_test=False):
-    global loss_test_flag
+def ParsePcap(pcap, ip1, ip2):
     cmd_line = 'tshark -r ' + pcap + ' -T fields -e frame.time_epoch -e ip.id -e frame.protocols -e frame.cap_len -R "((ip.src==' + ip1 + '&&ip.dst==' + ip2 + '))" -E separator=";" -E quote=d'
     proc = subprocess.Popen(cmd_line, stdout=subprocess.PIPE, shell=True)
     while True:
@@ -37,15 +33,7 @@ def ParsePcap(pcap, ip1, ip2, loss_test=False):
             packet.id = ipid
             packet.time = float(vals[0])
             packet.length = cap_len
-            if loss_test:
-                if loss_test_flag == True:
-                    loss_test_flag = False
-                    pass
-                else:
-                    loss_test_flag = True
-                    yield packet
-            else:
-                yield packet
+            yield packet
         else:
             break
 
@@ -70,7 +58,7 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
                 stop_out = True
         else:
             out_lead_in = out_lead_in + 1
-        if (not stop_in):
+        if not stop_in:
             try:
                 packet_in = In.next()
                 time_in = packet_in.time
@@ -78,8 +66,6 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
                 stop_in = True
         if packet_out and packet_in and packet_out.key == packet_in.key:
             packet_match = packet_out.OutMergeIn(packet_in)
-            if synched==False:
-                print 'synched:', packet_out.time
             synched = True
         else:
             out_key_in_in_dict, in_key_in_out_dict = False, False
@@ -91,7 +77,6 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
                     packet_match = packet_in.InMergeOut(unmatched_out[packet_in.key])
                     unmatched_out.pop(packet_in.key, None)
                     out_lead_in = -1-len(unmatched_out)
-                    # large in dict will not affect result, but performance
                     for (key, packet) in unmatched_in.items():
                         if packet_in.time - packet.time > HorizonLength:
                             unmatched_in.pop(key, None)
@@ -104,18 +89,15 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
                 if out_key_in_in_dict:
                     packet_match = packet_out.OutMergeIn(unmatched_in[packet_out.key])
                     unmatched_in.pop(packet_out.key, None)
-                    if synched==False:
-                        print 'synched:', packet_out.time
                     synched = True
                 else:
                     unmatched_out[packet_out.key] = packet_out
 
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
-        # TODO: synch as early as possible
-        if time_out - time_in > HorizonLength and synched==False:
-            out_lead_in = -1 
-
+        if synched==False:
+            if time_out - time_in > HorizonLength:
+                out_lead_in = -1 
         if synched == True and packet_out:
             if start_time_out == None or packet_out.time - start_time_out > Config_Loss_Small_Interval:
                 if start_time_out != None:
@@ -126,8 +108,6 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
                 for (key, packet) in unmatched_out.items():
                     if packet_out.time - packet.time > 0:
                         unmatched_out.pop(key, None)
-#                        print key
-#                print 'after pop in time interval', len(unmatched_out)
                 start_time_out = packet_out.time
                 packet_count_in_small_interval = 1
             else:
