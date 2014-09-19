@@ -109,7 +109,7 @@ try:
             continue
         time_out = int(row[0])
         if seq_s == seq:
-            delay = time_in - time_out
+            delay = float(time_in - time_out)/time_unit
             row_s = In.next()
             seq_s = int(row_s[1])
             time_in = int(row_s[0])

@@ -2,7 +2,7 @@ import subprocess
 import time
 
 Config_Loss_Small_Interval = 1 
-HorizonLength = 4
+HorizonLength = 10
 
 class Packet:
     def __init__(self):
@@ -18,14 +18,14 @@ class Packet:
         return self
 
 def ParsePcap(pcap, ip1, ip2):
-    cmd_line = 'tshark -r ' + pcap + ' -T fields -e frame.time_epoch -e ip.id -e frame.protocols -e frame.cap_len -R "(udp&&(udp.port==1234)&&(ip.src==' + ip1 + '&&ip.dst==' + ip2 + '))" -E separator=";" -E quote=d'
+    cmd_line = 'tshark -r ' + pcap + ' -T fields -e frame.time_epoch -e ip.id -e frame.protocols -e frame.cap_len -R "(udp&&(udp.port!=1234)&&(ip.src==' + ip1 + '&&ip.dst==' + ip2 + '))" -E separator=";" -E quote=d'
     proc = subprocess.Popen(cmd_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     while True:
         line = proc.stdout.readline()
-        err = proc.stderr.readline()
-        if err != '':
-            print err
-            continue 
+#        err = proc.stderr.readline()
+#        if err != '':
+#            print err
+#            continue 
         if line != '':
             vals = line.split(';')
             vals = [val.rstrip('\n').lstrip('"').rstrip('"') for val in vals]
