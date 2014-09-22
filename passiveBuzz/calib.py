@@ -4,7 +4,7 @@ def calib_range(min, max, value):
     if min == None:
         min = value
     if max < value:
-        max = value
+        max = value 
     if min > value:
         min = value
     return min, max

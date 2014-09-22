@@ -2,7 +2,8 @@ import subprocess
 import time
 
 Config_Loss_Small_Interval = 1 
-HorizonLength = 10
+HorizonLength = 1
+DelayRange = (-13, -12)
 
 class Packet:
     def __init__(self):
@@ -18,7 +19,7 @@ class Packet:
         return self
 
 def ParsePcap(pcap, ip1, ip2):
-    cmd_line = 'tshark -r ' + pcap + ' -T fields -e frame.time_epoch -e ip.id -e frame.protocols -e frame.cap_len -R "(udp.port==8999&&(ip.src==' + ip1 + '&&ip.dst==' + ip2 + '))" -E separator=";" -E quote=d'
+    cmd_line = 'tshark -r ' + pcap + ' -T fields -e frame.time_epoch -e ip.id -e frame.protocols -e frame.cap_len -R "((ip.src==' + ip1 + '&&ip.dst==' + ip2 + '))" -E separator=";" -E quote=d'
     proc = subprocess.Popen(cmd_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     while True:
         line = proc.stdout.readline()
@@ -41,9 +42,15 @@ def ParsePcap(pcap, ip1, ip2):
         else:
             break
 
-def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
-    In = ParsePcap(pcap_in, ip_out, ip_in)
-    Out = ParsePcap(pcap_out, ip_out, ip_in)
+def ParseMultiPcap(pcaps, ip1, ip2):
+    for pcap in pcaps:
+        print pcap
+        for item in ParsePcap(pcap, ip1, ip2):
+            yield item
+
+def MergePcap(pcap_outs, pcap_ins, ip_out, ip_in):
+    In = ParseMultiPcap(pcap_ins, ip_out, ip_in)
+    Out = ParseMultiPcap(pcap_outs, ip_out, ip_in)
     unmatched_out, unmatched_in = {}, {}
     stop_in = False
     stop_out = False
@@ -83,20 +90,21 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
             out_key_in_in_dict, in_key_in_out_dict = False, False
             if packet_in:
                 if packet_in.key in unmatched_out.keys():
-                    if abs(packet_in.time - unmatched_out[packet_in.key].time) < HorizonLength:
+                    if (packet_in.time - unmatched_out[packet_in.key].time) > DelayRange[0] and  (packet_in.time - unmatched_out[packet_in.key].time) < DelayRange[1]:
                         in_key_in_out_dict = True
                 if in_key_in_out_dict:
                     packet_match = packet_in.InMergeOut(unmatched_out[packet_in.key])
                     unmatched_out.pop(packet_in.key, None)
                     out_lead_in = -1-len(unmatched_out)
                     for (key, packet) in unmatched_in.items():
+                        # if packet in in_dict too far away from this packet in, remote it
                         if packet_in.time - packet.time > HorizonLength:
                             unmatched_in.pop(key, None)
                 else:
                     unmatched_in[packet_in.key] = packet_in
             if packet_out:
                 if packet_out.key in unmatched_in.keys():
-                    if abs(unmatched_in[packet_out.key].time - packet_out.time) < HorizonLength:
+                    if (unmatched_in[packet_out.key].time - packet_out.time) > DelayRange[0] and (unmatched_in[packet_out.key].time - packet_out.time) < DelayRange[1]:
                         out_key_in_in_dict = True
                 if out_key_in_in_dict:
                     packet_match = packet_out.OutMergeIn(unmatched_in[packet_out.key])
@@ -108,7 +116,7 @@ def MergePcap(pcap_out, pcap_in, ip_out, ip_in):
         if packet_match:
             yield {'key':packet_match.key, 'delay':packet_match.time_in - packet_match.time_out, 'out':packet_match.time_out}
         if synched==False and time_out and time_in:
-            if time_out - time_in > HorizonLength:
+            if time_out - time_in > HorizonLength + DelayRange[1]:
                 out_lead_in = -1 
         if synched == True and packet_out:
             if start_time_out == None or packet_out.time - start_time_out > Config_Loss_Small_Interval:

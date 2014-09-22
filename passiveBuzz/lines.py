@@ -1,4 +1,4 @@
-import range
+import calib
 import statpcap
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import host_subplot
@@ -12,8 +12,15 @@ time_list = list()
 delay_list = list()
 time_loss_list = list()
 loss_list = list()
-input_pcap = sys.argv[1]
-output_pcap = sys.argv[2]
+#input_pcap = sys.argv[1]
+#output_pcap = sys.argv[2]
+#input_pcap = ['pcap/in','pcap/in1', 'pcap/in2', 'pcap/in3', 'pcap/in4']
+input_pcap = ['pcap/in']
+for i in range(1, 44):
+    input_pcap.append('pcap/in' + str(i))
+output_pcap = ['pcap/out']
+for i in range(1, 45):
+    output_pcap.append('pcap/out' + str(i))
 
 time_before = time.time()
 counter = 0
@@ -21,7 +28,7 @@ for item in merge(output_pcap, input_pcap, '192.168.91.253', '192.168.91.64'):
     if 'delay' in item.keys():
         time_list.append(item['out'])
         delay_list.append(item['delay'])
-        min_delay, max_delay = range.calib_range(min_delay, max_delay, item['delay'])
+        min_delay, max_delay = calib.calib_range(min_delay, max_delay, item['delay'])
     elif 'loss' in item.keys():
         time_loss_list.append(item['out'])
         loss_list.append(item['loss'])
@@ -33,7 +40,7 @@ for item in merge(output_pcap, input_pcap, '192.168.91.253', '192.168.91.64'):
 time_after = time.time()
 dur = time_after - time_before
 
-min_delay, max_delay = range.extend_range(min_delay, max_delay)
+min_delay, max_delay = calib.extend_range(min_delay, max_delay)
 print 'delay range:', min_delay, max_delay
 print 'time range:', time_list[-1] - time_list[0]
 print 'sample count:', len(time_list)
